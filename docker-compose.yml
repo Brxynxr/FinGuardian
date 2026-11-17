@@ -1,0 +1,42 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: finguardian_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    volumes:
+      - finguardian_data:/app/data
+    networks:
+      - finguardian_net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: finguardian_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - finguardian_net
+
+volumes:
+  finguardian_data:
+    driver: local
+
+networks:
+  finguardian_net:
+    driver: bridge
