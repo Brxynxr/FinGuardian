@@ -24,10 +24,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH="/app"
 
 RUN groupadd -g 1001 appgroup && \
-    useradd -u 1001 -g appgroup -m -s /bin/bash appuser
+    useradd -u 1001 -g appgroup -m -s /bin/bash appuser && \
+    mkdir -p /app/data && \
+    chown -R appuser:appgroup /app
 
 COPY --from=builder /root/.local /home/appuser/.local
 COPY --chown=appuser:appgroup backend/ /app/backend/
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 

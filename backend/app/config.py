@@ -3,7 +3,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+# Cross-platform environment resolution (Windows, Linux, Docker)
+for env_path in [
+    BASE_DIR / ".env",
+    Path.cwd() / ".env",
+    Path.cwd() / "backend" / ".env",
+]:
+    if env_path.exists():
+        load_dotenv(env_path, override=False)
+        break
 
 class Settings:
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "FinGuardian AI")

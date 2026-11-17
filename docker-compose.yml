@@ -7,6 +7,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/finguardian.db
     env_file:
       - backend/.env
     volumes:
