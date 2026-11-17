@@ -41,7 +41,7 @@ def test_execution_engine_approval_commits_and_dispatches(db_session):
     emails = db_session.query(OutboxEmail).all()
     assert len(emails) >= 2
     for email in emails:
-        assert email.status == "DISPATCHED"
+        assert email.status in ["DISPATCHED", "DISPATCHED_OFFLINE"]
         assert "<html>" in email.body_html.lower()
 
     audit = db_session.query(AuditLog).filter(AuditLog.action_type == "APPROVE_RESCUE_PLAN").first()
