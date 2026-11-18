@@ -267,38 +267,7 @@ def chat_jamar_cfo(req: ChatRequest, db: Session = Depends(get_db)):
     Copiloto CFO Autónomo para Muebles Jamar alimentado por Groq 120B
     con contexto inyectado de tiendas, costos y cartera.
     """
-    cities = db.query(CityRegion).all()
-    stores_count = db.query(JamarStore).count()
-
-    context_str = f"""
-    Eres el Copiloto CFO Autónomo de MUEBLES JAMAR S.A. & CREDIJAMAR (Colombia).
-    Métricas de la empresa:
-    - Saldo en Bancos: $1.420.000.000 COP (Umbral seguro: $600M COP).
-    - Nómina Nacional: $780.000.000 COP mensuales (1.200 trabajadores en tiendas y planta Galapa).
-    - Red física: 14 Sedes activas (12 Showrooms + 2 CENDIS) en 4 Regionales.
-    - Ventas del Mes: $6.141.000.000 COP (77.2% financiado por Credijamar a cuotas, 22.8% dinero directo/contado).
-    - Recaudo Credijamar: 89.1% al día, 6.8% en mora temprana (1 a 15 días, $895M COP recuperables).
-    - Planta Principal: Clúster Industrial CILA Galapa (compra madera de pino/roble y espumas).
-    
-    Responde de forma ejecutiva, concisa, profesional y con cifras fundamentadas en pesos colombianos (COP).
-    """
-
-    system_prompt = context_str
-    user_query = req.message
-
-    try:
-        reply = ai_gateway.generate_chat_response(
-            system_prompt=system_prompt,
-            user_message=user_query,
-            groq_key_type="CHAT"
-        )
-        return {"answer": reply}
-    except Exception as e:
-        # Fallback analítico local si la API externa presenta microcortes
-        if "montería" in user_query.lower() or "nueva sede" in user_query.lower():
-            return {
-                "answer": "Para abrir una nueva sede en Montería (1.200 m²): CAPEX de $470M COP (adecuación + inventario exhibición), OPEX fijo de $56M COP/mes (nómina de 1 admin, 6 asesores, 2 armadores y arriendo). Break-even: Vender mínimo $143M COP mensuales (48 salas). Veredicto: Esperar al superávit de primas de mitad de año."
-            }
-        return {
-            "answer": f"Muebles Jamar opera actualmente con $1.420M COP en caja, $6.141M COP en ventas del mes (77% Credijamar) y 14 sedes activas."
-        }
+    from backend.app.agent.jamar_copilot import JamarCFOCopilotService
+    service = JamarCFOCopilotService(db)
+    answer = service.ask(req.message)
+    return {"answer": answer}

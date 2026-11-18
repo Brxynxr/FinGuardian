@@ -89,3 +89,10 @@ def test_jamar_rescue_approval_workflow(client):
     # 3. Check that pending proposal is now resolved
     prop_after = client.get("/api/jamar/proposal/pending")
     assert prop_after.json()["has_pending"] is False
+
+def test_jamar_cfo_chat(client):
+    response = client.post("/api/jamar/chat", json={"message": "¿Podemos abrir una nueva sede en Montería?"})
+    assert response.status_code == 200
+    data = response.json()
+    assert "answer" in data
+    assert len(data["answer"]) > 20
