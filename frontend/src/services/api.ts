@@ -7,11 +7,72 @@ import {
   AgentProposal,
   AuditLog,
   OutboxEmail,
+  CityFinancials,
+  StoreLocation,
+  CredijamarPortfolio,
 } from '../types';
 
 const API_BASE = '/api';
 
 export const api = {
+  // --- ENDPOINTS MUEBLES JAMAR (NUEVO MODELO RETAIL & CREDIJAMAR) ---
+  async getJamarSummary(): Promise<CompanySummary> {
+    const res = await fetch(`${API_BASE}/jamar/summary`);
+    return res.json();
+  },
+
+  async getJamarCities(): Promise<CityFinancials[]> {
+    const res = await fetch(`${API_BASE}/jamar/cities`);
+    const data = await res.json();
+    return data.cities || [];
+  },
+
+  async getJamarStores(cityId?: string): Promise<StoreLocation[]> {
+    const url = cityId ? `${API_BASE}/jamar/stores?city_id=${cityId}` : `${API_BASE}/jamar/stores`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.stores || [];
+  },
+
+  async getJamarCredijamar(): Promise<CredijamarPortfolio> {
+    const res = await fetch(`${API_BASE}/jamar/credijamar`);
+    return res.json();
+  },
+
+  async getJamarPendingProposal(): Promise<{ has_pending: boolean; proposal: AgentProposal | null }> {
+    const res = await fetch(`${API_BASE}/jamar/proposal/pending`);
+    return res.json();
+  },
+
+  async approveJamarProposal(proposalId: number, approvedBy: string = 'ADMIN_WEB'): Promise<any> {
+    const res = await fetch(`${API_BASE}/jamar/approve/${proposalId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved_by: approvedBy }),
+    });
+    return res.json();
+  },
+
+  async rejectJamarProposal(proposalId: number, reason: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/jamar/reject/${proposalId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, rejected_by: 'ADMIN_WEB' }),
+    });
+    return res.json();
+  },
+
+  async chatJamarCFO(message: string): Promise<string> {
+    const res = await fetch(`${API_BASE}/jamar/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await res.json();
+    return data.answer || data.response;
+  },
+
+  // --- ENDPOINTS HISTÓRICOS (INNOVACLOUD TECH SAS) ---
   async getSummary(): Promise<CompanySummary> {
     const res = await fetch(`${API_BASE}/financial/summary`);
     return res.json();

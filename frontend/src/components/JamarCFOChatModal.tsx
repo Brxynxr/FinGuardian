@@ -68,7 +68,7 @@ export const JamarCFOChatModal: React.FC<JamarCFOChatModalProps> = ({ isOpen, on
     try {
       let replyText = '';
       try {
-        const res = await api.chatCFO(query);
+        const res = await api.chatJamarCFO(query);
         replyText = res;
       } catch {
         if (query.toLowerCase().includes('montería') || query.toLowerCase().includes('nueva sede')) {
