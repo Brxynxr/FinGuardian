@@ -23,6 +23,7 @@ import {
   AgentProposal 
 } from '../types';
 import { JamarLiquidityChart } from './JamarLiquidityChart';
+import { NationalComparisonBarChart } from './NationalComparisonBarChart';
 
 interface NationalViewProps {
   summary: CompanySummary;
@@ -62,7 +63,7 @@ export const NationalView: React.FC<NationalViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       
       {/* 1. National Executive KPI Cards (White & Jamar Red Style) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -155,7 +156,7 @@ export const NationalView: React.FC<NationalViewProps> = ({
                 <h3 className="text-lg font-black text-slate-900 mt-1">
                   {proposal.title}
                 </h3>
-                <p className="text-xs text-slate-600 mt-0.5 max-w-2xl">
+                <p className="text-xs text-slate-600 mt-0.5 max-w-2xl font-medium">
                   {proposal.action_summary}
                 </p>
               </div>
@@ -190,14 +191,14 @@ export const NationalView: React.FC<NationalViewProps> = ({
               <button
                 onClick={() => onRejectProposal(proposal.id, 'Cancelado')}
                 disabled={isProcessing}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all disabled:opacity-50 active:scale-95"
               >
                 Rechazar
               </button>
               <button
                 onClick={() => onApproveProposal(proposal.id)}
                 disabled={isProcessing}
-                className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Aprobar y Ejecutar Rescate</span>
@@ -207,16 +208,19 @@ export const NationalView: React.FC<NationalViewProps> = ({
         </div>
       )}
 
-      {/* 3. GRID DE CIUDADES / REGIONALES (EL CORAZÓN DE LA NAVEGACIÓN) */}
+      {/* 3. DIAGRAMA COMPARATIVO DE REGIONALES (BAR CHART VISUAL) */}
+      <NationalComparisonBarChart cities={cities} />
+
+      {/* 4. GRID DE CIUDADES / REGIONALES (INTERACTIVO) */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
         <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-red-600" />
-              <span>Regionales y Ciudades Jamar en Colombia</span>
+              <span>Regionales Jamar en Colombia (Exploración Detallada)</span>
             </h3>
-            <p className="text-xs text-slate-500">
-              Selecciona una ciudad para auditar sus costos de nómina, ventas por categoría (Salas, Cuartos) y comportamiento de crédito.
+            <p className="text-xs text-slate-500 font-medium">
+              Haz clic en cualquier ciudad para auditar sus ventas por categoría (Salas, Cuartos) y tiendas
             </p>
           </div>
           <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full self-start sm:self-auto">
@@ -278,11 +282,11 @@ export const NationalView: React.FC<NationalViewProps> = ({
                   </div>
                   <div className="w-full bg-slate-200 rounded-full h-2 flex overflow-hidden">
                     <div
-                      className="bg-red-600 h-full"
+                      className="bg-red-600 h-full transition-all duration-700"
                       style={{ width: `${city.credit_sales_percentage}%` }}
                     />
                     <div
-                      className="bg-emerald-600 h-full"
+                      className="bg-emerald-600 h-full transition-all duration-700"
                       style={{ width: `${city.cash_sales_percentage}%` }}
                     />
                   </div>
@@ -291,7 +295,7 @@ export const NationalView: React.FC<NationalViewProps> = ({
 
               {/* Action Link Button */}
               <div className="mt-4 pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs font-bold text-red-600 group-hover:text-red-700">
-                <span>Explorar Finanzas de {city.name}</span>
+                <span>Ver Detalle de {city.name}</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
@@ -299,7 +303,7 @@ export const NationalView: React.FC<NationalViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Curva de Liquidez Nacional a 40 Días */}
+      {/* 5. Curva de Liquidez Nacional a 40 Días */}
       <JamarLiquidityChart
         projection={projection}
         safeThreshold={summary.safe_threshold}
