@@ -31,8 +31,9 @@ export const SedesCounterGrid: React.FC<SedesCounterGridProps> = ({ stores }) =>
       Regionales: 0,
     };
     stores.forEach((s) => {
-      if (counts[s.city] !== undefined) {
-        counts[s.city]++;
+      const c = s.city || s.city_name || '';
+      if (counts[c] !== undefined) {
+        counts[c]++;
       }
     });
     return counts;
@@ -41,7 +42,8 @@ export const SedesCounterGrid: React.FC<SedesCounterGridProps> = ({ stores }) =>
   // Filtrado reactivo
   const filteredStores = useMemo(() => {
     return stores.filter((store) => {
-      const matchesCity = selectedCity === 'TODAS' || store.city === selectedCity;
+      const c = store.city || store.city_name || '';
+      const matchesCity = selectedCity === 'TODAS' || c.includes(selectedCity);
       const matchesSearch =
         searchQuery === '' ||
         store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -182,7 +184,7 @@ export const SedesCounterGrid: React.FC<SedesCounterGridProps> = ({ stores }) =>
                 </h3>
                 <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 line-clamp-1">
                   <MapPin className="w-3 h-3 text-slate-500 shrink-0" />
-                  {store.address} ({store.city})
+                  {store.address} ({store.city_name || store.city})
                 </p>
 
                 {/* Main Metrics (Sales & Target or Production) */}
