@@ -7,7 +7,9 @@ import httpx
 
 from backend.app.database import engine, Base, SessionLocal
 from backend.app.api.routes import router
+from backend.app.api.jamar_routes import jamar_router
 from backend.app.services.seeder import seed_demo_data
+from backend.app.services.seeder_jamar import seed_jamar_database
 from backend.app.services.telegram_bot import telegram_bot_service
 from backend.app.services.execution_engine import ExecutionEngine
 from backend.app.config import settings
@@ -88,6 +90,8 @@ async def lifespan(app: FastAPI):
         from backend.app.models.financial import CompanyProfile
         if not db.query(CompanyProfile).first():
             seed_demo_data(db, reset_existing=False)
+        # Asegurar inicialización de Muebles Jamar en la base de datos local
+        seed_jamar_database(db)
     finally:
         db.close()
 
@@ -98,7 +102,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinGuardian AI — Autonomous CFO & Financial Operating System",
-    description="360° Financial Runway, Payroll Optimization, Snowflake Analytics & Autonomous Agent with Human-in-the-Loop",
+    description="360° Financial Runway, Payroll Optimization & Autonomous Agent for Muebles Jamar S.A. & Credijamar",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -112,6 +116,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(jamar_router, prefix="/api/jamar")
 
 @app.get("/")
 def health_check():
