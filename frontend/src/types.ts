@@ -1,5 +1,34 @@
+export interface StoreLocation {
+  id: number;
+  code: string;
+  name: string;
+  city: 'Barranquilla' | 'Bogotá' | 'Medellín' | 'Regionales';
+  address: string;
+  type: 'SHOWROOM' | 'CENDIS_FABRICA' | 'EXPRESS';
+  area_sqm: number;
+  monthly_rent_cop: number;
+  monthly_sales_target_cop: number;
+  actual_sales_cop: number;
+  credijamar_collection_rate: number; // e.g. 0.92 = 92%
+  active_advisors_count: number;
+  is_profitable: boolean;
+  status: 'OPERATIVA' | 'EN_EXPANSION';
+}
+
+export interface CredijamarPortfolio {
+  total_active_loans_cop: number;
+  on_time_loans_cop: number;
+  on_time_rate: number;
+  early_arrears_cop: number; // Mora 1-15 días
+  early_arrears_clients_count: number;
+  mid_arrears_cop: number; // Mora 16-60 días
+  late_arrears_cop: number; // Mora > 60 días
+  potential_rescue_injection_cop: number;
+}
+
 export interface CompanySummary {
   name: string;
+  currency?: string;
   current_balance: number;
   safe_threshold: number;
   has_deficit: boolean;
@@ -11,6 +40,8 @@ export interface CompanySummary {
   runway_days: number;
   burn_rate_daily: number;
   total_payroll: number;
+  active_stores_count?: number;
+  cendis_count?: number;
 }
 
 export interface TimelinePoint {
@@ -45,16 +76,6 @@ export interface Employee {
   is_active: boolean;
 }
 
-export interface ScheduledPayment {
-  id: number;
-  description: string;
-  vendor_name: string;
-  amount: number;
-  scheduled_date: string;
-  status: string;
-  category: string;
-}
-
 export interface Invoice {
   id: number;
   invoice_number: string;
@@ -65,6 +86,17 @@ export interface Invoice {
   discount_offered: number;
 }
 
+export interface ScheduledPayment {
+  id: number;
+  description: string;
+  vendor_name: string;
+  amount: number;
+  scheduled_date: string;
+  status: string;
+  category: string;
+  store_code?: string;
+}
+
 export interface ActionPayload {
   type: string;
   description?: string;
@@ -73,6 +105,8 @@ export interface ActionPayload {
   amount?: number;
   days_delayed?: number;
   discount_percentage?: number;
+  target_clients_count?: number;
+  estimated_recovery_cop?: number;
   reason: string;
   html_email_preview?: string;
 }
@@ -95,16 +129,18 @@ export interface AuditLog {
   action_type: string;
   details: string;
   meta: any;
-  snowflake_synced: boolean;
+  snowflake_synced?: boolean;
   created_at: string;
 }
 
 export interface OutboxEmail {
   id: number;
-  to_email: string;
+  recipient_email?: string;
+  to_email?: string;
+  recipient_name?: string;
   subject: string;
-  body_html: string;
-  body_text: string;
+  html_body?: string;
+  body_html?: string;
   status: string;
-  dispatched_at: string;
+  created_at: string;
 }

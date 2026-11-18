@@ -1,218 +1,227 @@
 import React, { useState, useEffect } from 'react';
-import { FinancialHeader } from './components/FinancialHeader';
-import { HealthMetricsCards } from './components/HealthMetricsCards';
-import { CashFlowChart } from './components/CashFlowChart';
-import { RescueActionCenter } from './components/RescueActionCenter';
-import { PayrollSection } from './components/PayrollSection';
-import { InvoiceUploaderModal } from './components/InvoiceUploaderModal';
-import { CFOChatModal } from './components/CFOChatModal';
-import { AuditSnowflakeTable } from './components/AuditSnowflakeTable';
+import { JamarHeader } from './components/JamarHeader';
+import { CredijamarCard } from './components/CredijamarCard';
+import { SedesCounterGrid } from './components/SedesCounterGrid';
+import { JamarLiquidityChart } from './components/JamarLiquidityChart';
+import { JamarRescueCenter } from './components/JamarRescueCenter';
+import { JamarCFOChatModal } from './components/JamarCFOChatModal';
+import { 
+  JAMAR_STORES, 
+  JAMAR_CREDIJAMAR_PORTFOLIO, 
+  JAMAR_SUMMARY, 
+  JAMAR_PROJECTION, 
+  JAMAR_PENDING_PROPOSAL 
+} from './services/jamarMockData';
 import { api } from './services/api';
-import {
-  CompanySummary,
-  ProjectionData,
-  Employee,
-  ScheduledPayment,
-  AgentProposal,
-  AuditLog,
-  OutboxEmail,
+import { 
+  CompanySummary, 
+  ProjectionData, 
+  AgentProposal, 
+  StoreLocation, 
+  CredijamarPortfolio 
 } from './types';
-import { X } from 'lucide-react';
+import { X, RefreshCw, Sparkles, ShieldCheck } from 'lucide-react';
 
 export function App() {
-  const [summary, setSummary] = useState<CompanySummary | null>(null);
-  const [projection, setProjection] = useState<ProjectionData | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [payments, setPayments] = useState<ScheduledPayment[]>([]);
-  const [pendingProposal, setPendingProposal] = useState<AgentProposal | null>(null);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [emails, setEmails] = useState<OutboxEmail[]>([]);
+  const [summary, setSummary] = useState<CompanySummary>(JAMAR_SUMMARY);
+  const [projection, setProjection] = useState<ProjectionData>(JAMAR_PROJECTION);
+  const [stores, setStores] = useState<StoreLocation[]>(JAMAR_STORES);
+  const [portfolio, setPortfolio] = useState<CredijamarPortfolio>(JAMAR_CREDIJAMAR_PORTFOLIO);
+  const [proposal, setProposal] = useState<AgentProposal | null>(JAMAR_PENDING_PROPOSAL);
 
   // Modals
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [emailPreviewHtml, setEmailPreviewHtml] = useState<string | null>(null);
   const [emailPreviewTitle, setEmailPreviewTitle] = useState('');
 
-  // Loading states
-  const [isLoading, setIsLoading] = useState(true);
-  const [isActionProcessing, setIsActionProcessing] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
+  // Status
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isRescued, setIsRescued] = useState(false);
 
-  const loadData = async () => {
+  // Intentar sincronizar con backend si está arriba
+  const syncWithBackend = async () => {
     try {
-      const [sum, proj, emps, pays, propData, logs, ems] = await Promise.all([
-        api.getSummary(),
-        api.getProjection(40),
-        api.getEmployees(),
-        api.getPayments(),
-        api.getPendingProposal(),
-        api.getAuditLogs(),
-        api.getEmails(),
-      ]);
-
-      setSummary(sum);
-      setProjection(proj);
-      setEmployees(emps);
-      setPayments(pays);
-      setPendingProposal(propData.has_pending ? propData.proposal : null);
-      setAuditLogs(logs);
-      setEmails(ems);
-    } catch (err) {
-      console.error('Error loading data:', err);
-    } finally {
-      setIsLoading(false);
+      const sum = await api.getSummary();
+      if (sum && sum.name.includes('Jamar')) {
+        setSummary(sum);
+      }
+    } catch {
+      // Usar mock local perfectamente calibrado
     }
   };
 
   useEffect(() => {
-    loadData();
-    // Live polling every 4 seconds to sync Telegram approvals in real time
-    const interval = setInterval(loadData, 4000);
-    return () => clearInterval(interval);
+    syncWithBackend();
   }, []);
 
-  const handleTriggerAnalysis = async () => {
-    setIsActionProcessing(true);
-    try {
-      await api.triggerAnalysis();
-      await loadData();
-    } finally {
-      setIsActionProcessing(false);
-    }
+  // Simulación interactiva de aprobación del rescate
+  const handleApproveProposal = (id: number) => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      // 1. Curar el déficit en la proyección
+      const updatedTimeline = projection.timeline.map((point) => {
+        // En los días de nómina (día 14 en adelante), sumamos los $340M del recaudo y $240M de la prórroga de madera
+        if (point.day_offset >= 11) {
+          const rescuedBalance = point.balance + 580000000;
+          return {
+            ...point,
+            balance: rescuedBalance,
+            pessimistic_balance: Math.round(rescuedBalance * 0.95),
+            expected_balance: rescuedBalance,
+            optimistic_balance: Math.round(rescuedBalance * 1.05),
+            is_deficit: false,
+          };
+        }
+        return point;
+      });
+
+      setProjection({
+        has_deficit: false,
+        minimum_balance: 195000000,
+        health_score: 94,
+        timeline: updatedTimeline,
+      });
+
+      // 2. Actualizar resumen
+      setSummary((prev) => ({
+        ...prev,
+        has_deficit: false,
+        health_score: 94,
+        minimum_balance: 195000000,
+        worst_deficit: 0,
+      }));
+
+      // 3. Limpiar propuesta pendiente
+      setProposal(null);
+      setIsRescued(true);
+      setIsProcessing(false);
+    }, 800);
   };
 
-  const handleApprove = async (proposalId: number) => {
-    setIsActionProcessing(true);
-    try {
-      await api.approveProposal(proposalId, 'ADMIN_WEB');
-      await loadData();
-    } finally {
-      setIsActionProcessing(false);
-    }
+  const handleRejectProposal = (id: number, reason: string) => {
+    setIsProcessing(true);
+    setTimeout(() => {
+      setProposal(null);
+      setIsProcessing(false);
+    }, 500);
   };
 
-  const handleReject = async (proposalId: number, reason: string) => {
-    setIsActionProcessing(true);
-    try {
-      await api.rejectProposal(proposalId, reason);
-      await loadData();
-    } finally {
-      setIsActionProcessing(false);
-    }
+  const handleResetScenario = () => {
+    setSummary(JAMAR_SUMMARY);
+    setProjection(JAMAR_PROJECTION);
+    setProposal(JAMAR_PENDING_PROPOSAL);
+    setIsRescued(false);
   };
-
-  const handleAddEmployee = async (employeeData: any) => {
-    await api.createEmployee(employeeData);
-    await loadData();
-  };
-
-  const handleResetDemo = async () => {
-    setIsResetting(true);
-    try {
-      await api.resetDemo();
-      await loadData();
-    } finally {
-      setIsResetting(false);
-    }
-  };
-
-  const handlePreviewEmail = (html: string, title: string) => {
-    setEmailPreviewHtml(html);
-    setEmailPreviewTitle(title);
-  };
-
-  if (isLoading || !summary || !projection) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-300">
-        <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold">Cargando FinGuardian AI...</p>
-        <p className="text-xs text-slate-500 mt-1">Conectando a base de datos y Snowflake DW</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
-      {/* Header */}
-      <FinancialHeader
-        companyName={summary.name}
+    <div className="min-h-screen bg-obsidian-950 text-slate-100 flex flex-col font-sans selection:bg-jamar-crimson selection:text-white">
+      
+      {/* 1. Executive Jamar Header */}
+      <JamarHeader
+        summary={summary}
         onOpenChat={() => setIsChatOpen(true)}
-        onOpenUpload={() => setIsUploadOpen(true)}
-        onResetDemo={handleResetDemo}
-        isResetting={isResetting}
+        onTriggerAnalysis={() => {}}
+        isProcessing={isProcessing}
       />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* KPI Cards */}
-        <HealthMetricsCards summary={summary} />
+      {/* Main Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        {/* Rescued Success Banner (If Approved) */}
+        {isRescued && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-obsidian-950 border border-emerald-600/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xl animate-fade-in">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-emerald-500 text-black">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white">
+                  ¡Plan de Rescate Ejecutado Exitosamente!
+                </h3>
+                <p className="text-xs text-slate-300">
+                  Se autorizó la campaña flash Credijamar a 2.450 clientes (recaudo estimado: <strong>+$340M COP</strong>) y se aplazó la factura de Maderas del Darién por 18 días. La nómina del día 14 está 100% blindada.
+                </p>
+              </div>
+            </div>
 
-        {/* Cash Flow Projection Chart */}
-        <CashFlowChart
-          timeline={projection.timeline}
+            <button
+              onClick={handleResetScenario}
+              className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 flex items-center gap-1.5 shrink-0 self-start sm:self-auto transition-all"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Restablecer Demostración</span>
+            </button>
+          </div>
+        )}
+
+        {/* 2. Rescue Protocol Center (If proposal exists) */}
+        <JamarRescueCenter
+          proposal={proposal}
+          onApprove={handleApproveProposal}
+          onReject={handleRejectProposal}
+          onPreviewEmail={(title, html) => {
+            setEmailPreviewTitle(title);
+            setEmailPreviewHtml(html);
+          }}
+          isProcessing={isProcessing}
+        />
+
+        {/* 3. Credijamar Portfolio Breakdown */}
+        <CredijamarCard
+          portfolio={portfolio}
+          onTargetEarlyArrears={() => {
+            // Scroll suave hacia la propuesta o abrir chat
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+
+        {/* 4. Liquidity Projection Curve (40 days COP) */}
+        <JamarLiquidityChart
+          projection={projection}
           safeThreshold={summary.safe_threshold}
         />
 
-        {/* Human-in-the-Loop Rescue Center */}
-        <RescueActionCenter
-          hasDeficit={summary.has_deficit}
-          pendingProposal={pendingProposal}
-          onTriggerAnalysis={handleTriggerAnalysis}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          isProcessing={isActionProcessing}
-          onPreviewEmail={handlePreviewEmail}
-        />
+        {/* 5. Sedes Counter Grid (Grouped by City) */}
+        <SedesCounterGrid stores={stores} />
 
-        {/* 360 Team, Payroll & Services */}
-        <PayrollSection
-          employees={employees}
-          payments={payments}
-          onAddEmployee={handleAddEmployee}
-        />
-
-        {/* Audit & Emails */}
-        <AuditSnowflakeTable
-          auditLogs={auditLogs}
-          emails={emails}
-          onPreviewEmail={handlePreviewEmail}
-        />
       </main>
 
-      {/* Modals */}
-      <CFOChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-      <InvoiceUploaderModal
-        isOpen={isUploadOpen}
-        onClose={() => setIsUploadOpen(false)}
-        onUploadSuccess={loadData}
+      {/* Footer */}
+      <footer className="border-t border-slate-900 bg-obsidian-950/80 py-4 text-center text-xs text-slate-400">
+        <p>
+          FinGuardian AI © 2026 — Edición Especial <strong>Muebles Jamar S.A. & Credijamar</strong> • Sede Central: Barranquilla & Clúster CILA Galapa.
+        </p>
+      </footer>
+
+      {/* CFO Chat Modal */}
+      <JamarCFOChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
       />
 
-      {/* Corporate Email Preview Modal */}
+      {/* HTML Email / Message Preview Modal */}
       {emailPreviewHtml && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl relative overflow-hidden">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-white">{emailPreviewTitle}</h3>
-                <p className="text-xs text-slate-400">Previsualización exacta del correo HTML corporativo enviado vía Gmail</p>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-2xl bg-white text-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-4 bg-slate-100 border-b flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-800">
+                {emailPreviewTitle}
+              </h3>
               <button
                 onClick={() => setEmailPreviewHtml(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 bg-slate-950">
-              <div
-                className="bg-white rounded-lg shadow p-2"
-                dangerouslySetInnerHTML={{ __html: emailPreviewHtml }}
-              />
-            </div>
+            <div
+              className="p-6 overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: emailPreviewHtml }}
+            />
           </div>
         </div>
       )}
+
     </div>
   );
 }

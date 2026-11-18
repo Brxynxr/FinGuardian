@@ -88,7 +88,7 @@ export const AuditSnowflakeTable: React.FC<Props> = ({ auditLogs, emails, onPrev
                   <p className="text-[11px] text-slate-400">Destinatario: {e.to_email}</p>
                 </div>
                 <button
-                  onClick={() => onPreviewEmail(e.body_html, e.subject)}
+                  onClick={() => onPreviewEmail(e.body_html || e.html_body || '', e.subject)}
                   className="flex items-center space-x-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 border border-slate-700 text-[11px] font-semibold transition flex-shrink-0"
                 >
                   <span>Ver HTML</span>
