@@ -19,7 +19,7 @@ if not exist "frontend\node_modules" (
 
 echo [3/3] Levantando servidores...
 start "FinGuardian Backend" cmd /k "backend\venv\Scripts\activate && uvicorn backend.app.main:app --reload --port 8000"
-start "FinGuardian Frontend" cmd /k "cd frontend && npm run dev"
+start "FinGuardian Frontend" cmd /k "cd frontend && npm run dev -- --port 5173"
 
 echo.
 echo ========================================================
