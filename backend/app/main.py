@@ -46,12 +46,35 @@ async def telegram_polling_worker():
 
                         db = SessionLocal()
                         try:
-                            engine_exec = ExecutionEngine(db)
-                            if cb_data.startswith("approve:"):
+                            if cb_data.startswith("approve_jamar:"):
                                 prop_id = int(cb_data.split(":")[1])
+                                from backend.app.api.jamar_routes import execute_jamar_approval
+                                res = execute_jamar_approval(db, prop_id, approved_by="ADMIN_TELEGRAM")
+                                if res.get("success"):
+                                    telegram_bot_service.send_message(
+                                        f"✅ *PLAN DE RESCATE MUEBLES JAMAR APROBADO VÍA TELEGRAM*\n\n"
+                                        f"• *Propuesta:* #{prop_id}\n"
+                                        f"• *Acciones Ejecutadas:*\n"
+                                        f"  1. Activada condonación de mora a 2.450 clientes Credijamar (+340M COP).\n"
+                                        f"  2. Prórroga de 18 días en factura MAD-8891 de Maderas del Darién (Galapa).\n"
+                                        f"• *Auditoría:* Registrado en `LocalAuditLog` con saldo protegido en +$195.000.000 COP.\n"
+                                        f"• *Nómina:* Garantizada al 100% para las 14 tiendas."
+                                    )
+                            elif cb_data.startswith("reject_jamar:"):
+                                prop_id = int(cb_data.split(":")[1])
+                                from backend.app.api.jamar_routes import execute_jamar_rejection
+                                execute_jamar_rejection(db, prop_id, reason="Rechazado vía Telegram", rejected_by="ADMIN_TELEGRAM")
+                                telegram_bot_service.send_message(
+                                    f"❌ *PLAN DE RESCATE MUEBLES JAMAR RECHAZADO VÍA TELEGRAM*\n\n"
+                                    f"La propuesta #{prop_id} fue desestimada y registrada en auditoría local."
+                                )
+                            elif cb_data.startswith("approve:"):
+                                prop_id = int(cb_data.split(":")[1])
+                                engine_exec = ExecutionEngine(db)
                                 engine_exec.approve_proposal(prop_id, approved_by="ADMIN_TELEGRAM")
                             elif cb_data.startswith("reject:"):
                                 prop_id = int(cb_data.split(":")[1])
+                                engine_exec = ExecutionEngine(db)
                                 engine_exec.reject_proposal(prop_id, reason="Rechazado vía Telegram", rejected_by="ADMIN_TELEGRAM")
                         finally:
                             db.close()

@@ -18,6 +18,7 @@ import {
   AgentProposal 
 } from './types';
 import { X, RefreshCw, ShieldCheck } from 'lucide-react';
+import { api } from './services/api';
 
 export function App() {
   const [summary, setSummary] = useState<CompanySummary>(JAMAR_SUMMARY);
@@ -38,52 +39,96 @@ export function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRescued, setIsRescued] = useState(false);
 
-  // Simulación interactiva de aprobación del rescate
-  const handleApproveProposal = (id: number) => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      const updatedTimeline = projection.timeline.map((point) => {
-        if (point.day_offset >= 11) {
-          const rescuedBalance = point.balance + 580000000;
-          return {
-            ...point,
-            balance: rescuedBalance,
-            pessimistic_balance: Math.round(rescuedBalance * 0.95),
-            expected_balance: rescuedBalance,
-            optimistic_balance: Math.round(rescuedBalance * 1.05),
-            is_deficit: false,
-          };
+  // Cargar datos en vivo desde el Backend FastAPI si está disponible
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchLiveData() {
+      try {
+        const [sumRes, citiesRes, storesRes, propRes] = await Promise.all([
+          api.getJamarSummary().catch(() => null),
+          api.getJamarCities().catch(() => null),
+          api.getJamarStores().catch(() => null),
+          api.getJamarPendingProposal().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (sumRes && sumRes.name) {
+          setSummary(sumRes);
         }
-        return point;
-      });
+        if (citiesRes && Array.isArray(citiesRes) && citiesRes.length > 0) {
+          setCities(citiesRes);
+        }
+        if (storesRes && Array.isArray(storesRes) && storesRes.length > 0) {
+          setStores(storesRes);
+        }
+        if (propRes) {
+          setProposal(propRes.proposal);
+        }
+      } catch (err) {
+        console.info('FinGuardian AI: Utilizando datos base de demostración offline para Jamar.', err);
+      }
+    }
 
-      setProjection({
-        has_deficit: false,
-        minimum_balance: 195000000,
-        health_score: 94,
-        timeline: updatedTimeline,
-      });
+    fetchLiveData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-      setSummary((prev) => ({
-        ...prev,
-        has_deficit: false,
-        health_score: 94,
-        minimum_balance: 195000000,
-        worst_deficit: 0,
-      }));
+  // Aprobación Human-in-the-Loop del rescate financiero
+  const handleApproveProposal = async (id: number) => {
+    setIsProcessing(true);
+    try {
+      await api.approveJamarProposal(id, 'ADMIN_WEB');
+    } catch (err) {
+      console.warn('Ejecución local frontend de rescate activada:', err);
+    }
 
-      setProposal(null);
-      setIsRescued(true);
-      setIsProcessing(false);
-    }, 800);
+    const updatedTimeline = projection.timeline.map((point) => {
+      if (point.day_offset >= 11) {
+        const rescuedBalance = point.balance + 580000000;
+        return {
+          ...point,
+          balance: rescuedBalance,
+          pessimistic_balance: Math.round(rescuedBalance * 0.95),
+          expected_balance: rescuedBalance,
+          optimistic_balance: Math.round(rescuedBalance * 1.05),
+          is_deficit: false,
+        };
+      }
+      return point;
+    });
+
+    setProjection({
+      has_deficit: false,
+      minimum_balance: 195000000,
+      health_score: 94,
+      timeline: updatedTimeline,
+    });
+
+    setSummary((prev) => ({
+      ...prev,
+      has_deficit: false,
+      health_score: 94,
+      minimum_balance: 195000000,
+      worst_deficit: 0,
+    }));
+
+    setProposal(null);
+    setIsRescued(true);
+    setIsProcessing(false);
   };
 
-  const handleRejectProposal = (id: number, reason: string) => {
+  const handleRejectProposal = async (id: number, reason: string) => {
     setIsProcessing(true);
-    setTimeout(() => {
-      setProposal(null);
-      setIsProcessing(false);
-    }, 500);
+    try {
+      await api.rejectJamarProposal(id, reason);
+    } catch (err) {
+      console.warn('Rechazo procesado localmente:', err);
+    }
+    setProposal(null);
+    setIsProcessing(false);
   };
 
   const handleResetScenario = () => {

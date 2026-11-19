@@ -193,17 +193,17 @@ def get_pending_proposal(db: Session = Depends(get_db)):
     }
 
 
-@jamar_router.post("/approve/{proposal_id}")
-def approve_jamar_proposal(proposal_id: int, req: ApprovalRequest, db: Session = Depends(get_db)):
+def execute_jamar_approval(db: Session, proposal_id: int, approved_by: str = "ADMIN") -> Dict[str, Any]:
     """
-    Human-in-the-Loop: Aprueba el plan de rescate en la base de datos local SQLite.
+    Consolida la ejecución del rescate de Muebles Jamar:
     1. Marca la propuesta como APROBADA.
     2. Aplica la prórroga contractual al proveedor de maderas en Galapa.
-    3. Registra la auditoría inmutable localmente (sin Snowflake).
+    3. Condonación de mora para clientes de Credijamar.
+    4. Registra la auditoría inmutable localmente (LocalAuditLog).
     """
     prop = db.query(AgentProposal).filter(AgentProposal.id == proposal_id).first()
     if not prop:
-        raise HTTPException(status_code=404, detail="Propuesta no encontrada.")
+        return {"success": False, "error": "Propuesta no encontrada."}
 
     prop.status = "APPROVED"
 
@@ -221,7 +221,7 @@ def approve_jamar_proposal(proposal_id: int, req: ApprovalRequest, db: Session =
     sim_balance = 195000000.0
     # Auditoría Local
     audit = LocalAuditLog(
-        actor=req.approved_by,
+        actor=approved_by,
         action_type="RESCATE_APROBADO_JAMAR",
         action_summary=f"Aprobación del rescate #{prop.id}: Campaña Flash Credijamar + Prórroga de madera 18 días.",
         protected_balance_cop=sim_balance,
@@ -234,7 +234,42 @@ def approve_jamar_proposal(proposal_id: int, req: ApprovalRequest, db: Session =
         "success": True,
         "message": "Plan de rescate de Muebles Jamar aprobado y ejecutado en base de datos local.",
         "simulated_minimum_balance": sim_balance,
+        "proposal_id": prop.id,
     }
+
+
+def execute_jamar_rejection(db: Session, proposal_id: int, reason: str = "Rechazado manualmente", rejected_by: str = "ADMIN") -> Dict[str, Any]:
+    """
+    Rechaza la propuesta y almacena el motivo en la auditoría local.
+    """
+    prop = db.query(AgentProposal).filter(AgentProposal.id == proposal_id).first()
+    if not prop:
+        return {"success": False, "error": "Propuesta no encontrada."}
+
+    prop.status = "REJECTED"
+
+    audit = LocalAuditLog(
+        actor=rejected_by,
+        action_type="RESCATE_RECHAZADO_JAMAR",
+        action_summary=f"Rechazo del rescate #{prop.id}. Motivo: {reason}",
+        protected_balance_cop=0.0,
+        details={"proposal_id": prop.id, "reason": reason}
+    )
+    db.add(audit)
+    db.commit()
+
+    return {"success": True, "message": "Propuesta rechazada.", "proposal_id": prop.id}
+
+
+@jamar_router.post("/approve/{proposal_id}")
+def approve_jamar_proposal(proposal_id: int, req: ApprovalRequest, db: Session = Depends(get_db)):
+    """
+    Human-in-the-Loop: Aprueba el plan de rescate en la base de datos local SQLite.
+    """
+    res = execute_jamar_approval(db, proposal_id, approved_by=req.approved_by)
+    if not res.get("success"):
+        raise HTTPException(status_code=404, detail=res.get("error", "Error al procesar aprobación"))
+    return res
 
 
 @jamar_router.post("/reject/{proposal_id}")
@@ -242,23 +277,10 @@ def reject_jamar_proposal(proposal_id: int, req: RejectionRequest, db: Session =
     """
     Rechaza la propuesta y almacena el motivo en la auditoría local.
     """
-    prop = db.query(AgentProposal).filter(AgentProposal.id == proposal_id).first()
-    if not prop:
-        raise HTTPException(status_code=404, detail="Propuesta no encontrada.")
-
-    prop.status = "REJECTED"
-
-    audit = LocalAuditLog(
-        actor=req.rejected_by,
-        action_type="RESCATE_RECHAZADO_JAMAR",
-        action_summary=f"Rechazo del rescate #{prop.id}. Motivo: {req.reason}",
-        protected_balance_cop=0.0,
-        details={"proposal_id": prop.id, "reason": req.reason}
-    )
-    db.add(audit)
-    db.commit()
-
-    return {"success": True, "message": "Propuesta rechazada."}
+    res = execute_jamar_rejection(db, proposal_id, reason=req.reason, rejected_by=req.rejected_by)
+    if not res.get("success"):
+        raise HTTPException(status_code=404, detail=res.get("error", "Error al procesar rechazo"))
+    return res
 
 
 @jamar_router.post("/chat")
